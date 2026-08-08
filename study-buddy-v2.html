@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyDesk AI — Homework Helper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f6fb;
+    --surface:#ffffff;
+    --border:#e6e9f2;
+    --accent:#5b5fee;
+    --accent-dark:#4548c9;
+    --accent-soft:#eef0ff;
+    --text:#1c2130;
+    --text-soft:#6b7280;
+    --user-bubble:#5b5fee;
+    --ai-bubble:#f1f3f9;
+    --error:#e5484d;
+    --radius-lg:20px;
+    --radius-md:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    font-family:'Inter','Noto Sans Devanagari',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+  }
+
+  /* ---------- App bar ---------- */
+  .appbar{
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    padding:14px 18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    position:sticky;
+    top:0;
+    z-index:20;
+  }
+  .appbar .title{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .appbar .logo{
+    width:34px;height:34px;
+    border-radius:10px;
+    background:linear-gradient(135deg,var(--accent),#8b8ef7);
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.1rem;
+  }
+  .appbar h1{
+    font-size:1.02rem;
+    margin:0;
+    font-weight:700;
+  }
+  .appbar .subtitle{
+    font-size:0.72rem;
+    color:var(--text-soft);
+    margin-top:1px;
+  }
+  .key-pill{
+    font-size:0.75rem;
+    font-weight:600;
+    color:var(--text-soft);
+    background:var(--bg);
+    border:1px solid var(--border);
+    padding:7px 13px;
+    border-radius:100px;
+    cursor:pointer;
+  }
+  .key-pill.set{color:#1f9d6e; background:#e9f9f1; border-color:#c7edd9;}
+
+  /* ---------- Subject chip bar ---------- */
+  .chip-bar{
+    display:flex;
+    gap:8px;
+    padding:12px 18px;
+    overflow-x:auto;
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+  }
+  .chip-bar::-webkit-scrollbar{display:none;}
+  .chip{
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:8px 14px;
+    border-radius:100px;
+    border:1px solid var(--border);
+    background:var(--bg);
+    color:var(--text-soft);
+    font-size:0.83rem;
+    font-weight:600;
+    cursor:pointer;
+    transition:.15s ease;
+    white-space:nowrap;
+  }
+  .chip:hover{background:#eceffa;}
+  .chip.active{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+  }
+
+  /* ---------- Main chat ---------- */
+  .main{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    max-width:760px;
+    width:100%;
+    margin:0 auto;
+    min-height:0;
+  }
+  .messages{
+    flex:1;
+    overflow-y:auto;
+    padding:20px 16px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .msg-row{
+    display:flex;
+    flex-direction:column;
+    max-width:80%;
+    animation:pop .2s ease;
+  }
+  @keyframes pop{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+  .msg-row.user{align-self:flex-end; align-items:flex-end;}
+  .msg-row.ai{align-self:flex-start; align-items:flex-start;}
+  .bubble{
+    padding:11px 15px;
+    border-radius:var(--radius-md);
+    line-height:1.55;
+    font-size:0.94rem;
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+  .msg-row.user .bubble{
+    background:var(--user-bubble);
+    color:#fff;
+    border-bottom-right-radius:4px;
+  }
+  .msg-row.ai .bubble{
+    background:var(--ai-bubble);
+    color:var(--text);
+    border-bottom-left-radius:4px;
+  }
+  .msg-row.system{
+    align-self:center;
+    max-width:90%;
+  }
+  .msg-row.system .bubble{
+    background:transparent;
+    color:var(--text-soft);
+    font-size:0.82rem;
+    font-style:italic;
+    text-align:center;
+  }
+  .bubble img.attach{
+    display:block;
+    max-width:220px;
+    max-height:220px;
+    border-radius:12px;
+    margin-bottom:8px;
+    object-fit:cover;
+  }
+  .bubble code{
+    font-family:'JetBrains Mono',monospace;
+    background:rgba(0,0,0,0.08);
+    padding:1px 5px;
+    border-radius:4px;
+    font-size:0.85em;
+  }
+  .bubble pre{
+    font-family:'JetBrains Mono',monospace;
+    background:#1c2130;
+    color:#e4e8f5;
+    padding:12px;
+    border-radius:10px;
+    overflow-x:auto;
+    font-size:0.82rem;
+    margin:8px 0;
+  }
+
+  .typing-row{align-self:flex-start;}
+  .typing{
+    display:flex;
+    gap:5px;
+    padding:13px 16px;
+    background:var(--ai-bubble);
+    border-radius:var(--radius-md);
+    border-bottom-left-radius:4px;
+  }
+  .typing span{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--accent);
+    animation:bounce 1.1s infinite ease-in-out;
+  }
+  .typing span:nth-child(2){animation-delay:.15s;}
+  .typing span:nth-child(3){animation-delay:.3s;}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.4;} 30%{transform:translateY(-5px);opacity:1;}}
+
+  .error-banner{
+    margin:0 16px 10px 16px;
+    background:#fdeceb;
+    border:1px solid #f6c9c7;
+    color:#a5322d;
+    font-size:0.85rem;
+    padding:12px 14px;
+    border-radius:12px;
+    display:none;
+    line-height:1.5;
+  }
+  .error-banner .err-title{
+    font-weight:700;
+    margin-bottom:4px;
+    display:block;
+  }
+  .error-banner .err-detail{
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.72rem;
+    color:#8a2a26;
+    word-break:break-word;
+    white-space:pre-wrap;
+    display:block;
+    margin-top:6px;
+    opacity:0.9;
+  }
+
+  /* ---------- Composer ---------- */
+  .composer-wrap{
+    background:var(--surface);
+    border-top:1px solid var(--border);
+    padding:12px 16px 16px 16px;
+  }
+  .preview-strip{
+    display:none;
+    align-items:center;
+    gap:10px;
+    padding:8px 10px;
+    margin-bottom:8px;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:12px;
+  }
+  .preview-strip.show{display:flex;}
+  .preview-strip img{
+    width:46px;height:46px;
+    object-fit:cover;
+    border-radius:8px;
+  }
+  .preview-strip .fname{
+    flex:1;
+    font-size:0.8rem;
+    color:var(--text-soft);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .preview-strip .remove-btn{
+    background:none;
+    border:none;
+    color:var(--error);
+    font-size:1.1rem;
+    cursor:pointer;
+    line-height:1;
+    padding:4px;
+  }
+  .composer{
+    display:flex;
+    align-items:flex-end;
+    gap:8px;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:6px 6px 6px 8px;
+  }
+  .icon-btn{
+    width:38px;height:38px;
+    flex-shrink:0;
+    border-radius:50%;
+    border:none;
+    background:transparent;
+    color:var(--text-soft);
+    font-size:1.15rem;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:background .15s ease;
+  }
+  .icon-btn:hover{background:var(--accent-soft); color:var(--accent);}
+  .composer textarea{
+    flex:1;
+    resize:none;
+    border:none;
+    background:transparent;
+    outline:none;
+    font-family:inherit;
+    font-size:0.94rem;
+    padding:9px 4px;
+    max-height:120px;
+    min-height:24px;
+    color:var(--text);
+  }
+  .send-btn{
+    width:38px;height:38px;
+    flex-shrink:0;
+    border-radius:50%;
+    border:none;
+    background:var(--accent);
+    color:#fff;
+    font-size:1.05rem;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:background .15s ease, transform .1s ease;
+  }
+  .send-btn:hover:not(:disabled){background:var(--accent-dark);}
+  .send-btn:disabled{opacity:0.4; cursor:not-allowed;}
+  .hint{
+    text-align:center;
+    font-size:0.68rem;
+    color:#9aa1b1;
+    margin-top:8px;
+  }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0;
+    background:rgba(20,24,38,0.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal{
+    background:var(--surface);
+    border-radius:18px;
+    max-width:420px;
+    width:100%;
+    padding:24px;
+    box-shadow:0 30px 60px rgba(20,24,38,0.25);
+  }
+  .modal h3{margin:0 0 8px 0; font-size:1.05rem;}
+  .modal p{
+    font-size:0.85rem;
+    color:var(--text-soft);
+    line-height:1.55;
+    margin:0 0 14px 0;
+  }
+  .modal a{color:var(--accent); font-weight:600; text-decoration:none;}
+  .modal input{
+    width:100%;
+    padding:11px 13px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:var(--bg);
+    font-size:0.85rem;
+    margin-bottom:12px;
+    color:var(--text);
+  }
+  .modal-actions{display:flex; gap:10px; justify-content:flex-end;}
+  .modal-actions button{
+    padding:10px 16px;
+    border-radius:10px;
+    border:none;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+    font-size:0.85rem;
+  }
+  .btn-secondary{background:transparent; color:var(--text-soft); border:1px solid var(--border) !important;}
+  .btn-primary{background:var(--accent); color:#fff;}
+
+  @media (max-width:520px){
+    .msg-row{max-width:88%;}
+    .appbar h1{font-size:0.92rem;}
+    .appbar .subtitle{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="appbar">
+  <div class="title">
+    <div class="logo">📚</div>
+    <div>
+      <h1>StudyDesk AI</h1>
+      <div class="subtitle">Hindi • English • Math • Physics • Chemistry • Biology</div>
+    </div>
+  </div>
+  <button class="key-pill" id="keyPill" onclick="openKeyModal()">API key not set</button>
+</div>
+
+<div class="chip-bar" id="chipBar">
+  <button class="chip active" data-subject="general" onclick="selectSubject('general', this)">📘 General</button>
+  <button class="chip" data-subject="math" onclick="selectSubject('math', this)">➗ Math</button>
+  <button class="chip" data-subject="physics" onclick="selectSubject('physics', this)">⚛️ Physics</button>
+  <button class="chip" data-subject="chemistry" onclick="selectSubject('chemistry', this)">🧪 Chemistry</button>
+  <button class="chip" data-subject="biology" onclick="selectSubject('biology', this)">🧬 Biology</button>
+  <button class="chip" data-subject="english" onclick="selectSubject('english', this)">🔤 English</button>
+  <button class="chip" data-subject="hindi" onclick="selectSubject('hindi', this)">✒️ Hindi</button>
+</div>
+
+<div class="main">
+  <div class="messages" id="messages">
+    <div class="msg-row system"><div class="bubble">Apni API key set karke shuru karein 👆 (ya koi bhi sawaal type karein / photo upload karein — jaise homework ka question ya diagram)</div></div>
+  </div>
+
+  <div class="error-banner" id="errorBanner"></div>
+
+  <div class="composer-wrap">
+    <div class="preview-strip" id="previewStrip">
+      <img id="previewImg" src="" alt="attached">
+      <span class="fname" id="previewName"></span>
+      <button class="remove-btn" onclick="removeAttachment()">✕</button>
+    </div>
+    <div class="composer">
+      <button class="icon-btn" title="Attach image" onclick="document.getElementById('fileInput').click()">📎</button>
+      <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFileSelect(event)">
+      <textarea id="userInput" placeholder="Sawaal likhein ya photo attach karein..." rows="1"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+    </div>
+    <div class="hint">Enter = send · Shift+Enter = new line · Photo bhi bhej sakte hain</div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="keyModal">
+  <div class="modal">
+    <h3>Add your free Gemini API key</h3>
+    <p>
+      Google AI Studio deta hai ek free API key. Jaayein
+      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>
+      par, "Create API key" par click karein, aur yahan paste karein. Ye key sirf aapke browser mein (localStorage) save hoti hai — kahin aur nahi jaati.
+    </p>
+    <input type="password" id="apiKeyInput" placeholder="AIza...">
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeKeyModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveApiKey()">Save key</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------------- Config ----------------
+const MODEL = "gemini-2.5-flash";
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+const MAX_IMAGE_MB = 4;
+
+const SUBJECTS = {
+  general: { label:"General", system:"You are StudyDesk, a friendly tutor for Indian school and college students. Help with any subject clearly and step-by-step." },
+  math: { label:"Math", system:"You are a patient math tutor for Indian students (school to college level). Always solve step-by-step, show the formula used, and explain reasoning simply. Use plain text notation for equations (e.g. x^2, sqrt(x), a/b)." },
+  physics: { label:"Physics", system:"You are a physics tutor for Indian students (NCERT/JEE/NEET style). Explain the concept first, then solve numericals step-by-step with correct units and the relevant formula." },
+  chemistry: { label:"Chemistry", system:"You are a chemistry tutor for Indian students (NCERT/JEE/NEET style). Explain reaction mechanisms clearly, balance equations correctly, use simple structured explanations." },
+  biology: { label:"Biology", system:"You are a biology tutor for Indian students (NCERT/NEET style). Explain concepts clearly with correct terminology and keep answers exam-relevant." },
+  english: { label:"English", system:"You are an English language tutor for Indian students. Help with grammar, vocabulary, essay writing and comprehension, with clear rules and examples." },
+  hindi: { label:"Hindi", system:"Aap ek Hindi bhasha tutor hain jo Indian students ki madad karte hain — vyakaran, nibandh lekhan, anuvaad aur sahitya ke sawaalon ke saral jawab dein, examples ke saath." }
+};
+
+let currentSubject = "general";
+let apiKey = localStorage.getItem("studydesk_gemini_key") || "";
+let apiHistory = [];   // [{role, parts:[{text}|{inline_data}]}]  -> sent to Gemini
+let isSending = false;
+let attachedImage = null; // {mimeType, base64, name}
+
+// ---------------- Init ----------------
+window.addEventListener("DOMContentLoaded", () => {
+  updateKeyPill();
+  const ta = document.getElementById("userInput");
+  ta.addEventListener("input", () => {
+    ta.style.height = "auto";
+    ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
+  });
+  ta.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+  if (!apiKey) openKeyModal();
+});
+
+// ---------------- Subject selection ----------------
+function selectSubject(key, btn) {
+  currentSubject = key;
+  document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+  btn.classList.add("active");
+}
+
+// ---------------- API key modal ----------------
+function openKeyModal() {
+  document.getElementById("apiKeyInput").value = apiKey;
+  document.getElementById("keyModal").classList.add("show");
+}
+function closeKeyModal() { document.getElementById("keyModal").classList.remove("show"); }
+function saveApiKey() {
+  const val = document.getElementById("apiKeyInput").value.trim();
+  if (!val) return;
+  apiKey = val;
+  localStorage.setItem("studydesk_gemini_key", apiKey);
+  updateKeyPill();
+  closeKeyModal();
+  hideError();
+}
+function updateKeyPill() {
+  const pill = document.getElementById("keyPill");
+  if (apiKey) { pill.textContent = "API key set ✓"; pill.classList.add("set"); }
+  else { pill.textContent = "API key not set"; pill.classList.remove("set"); }
+}
+
+// ---------------- Image attach ----------------
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith("image/")) { showError("Sirf image files allowed hain."); return; }
+  if (file.size > MAX_IMAGE_MB * 1024 * 1024) { showError(`Image ${MAX_IMAGE_MB}MB se chhoti honi chahiye.`); return; }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = reader.result;
+    const base64 = dataUrl.split(",")[1];
+    attachedImage = { mimeType: file.type, base64, name: file.name, previewUrl: dataUrl };
+    document.getElementById("previewImg").src = dataUrl;
+    document.getElementById("previewName").textContent = file.name;
+    document.getElementById("previewStrip").classList.add("show");
+    hideError();
+  };
+  reader.readAsDataURL(file);
+  event.target.value = "";
+}
+function removeAttachment() {
+  attachedImage = null;
+  document.getElementById("previewStrip").classList.remove("show");
+}
+
+// ---------------- Chat rendering ----------------
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function renderContent(text) {
+  let safe = escapeHtml(text || "");
+  safe = safe.replace(/```([\s\S]*?)```/g, (m, code) => `<pre>${code.trim()}</pre>`);
+  safe = safe.replace(/`([^`]+)`/g, (m, code) => `<code>${code}</code>`);
+  return safe;
+}
+function appendMessage(role, text, imagePreviewUrl) {
+  const box = document.getElementById("messages");
+  const row = document.createElement("div");
+  row.className = "msg-row " + role;
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  let inner = "";
+  if (imagePreviewUrl) inner += `<img class="attach" src="${imagePreviewUrl}">`;
+  inner += renderContent(text);
+  bubble.innerHTML = inner;
+  row.appendChild(bubble);
+  box.appendChild(row);
+  box.scrollTop = box.scrollHeight;
+}
+function showTyping() {
+  const box = document.getElementById("messages");
+  const row = document.createElement("div");
+  row.className = "msg-row typing-row";
+  row.id = "typingRow";
+  row.innerHTML = `<div class="typing"><span></span><span></span><span></span></div>`;
+  box.appendChild(row);
+  box.scrollTop = box.scrollHeight;
+}
+function hideTyping() {
+  const t = document.getElementById("typingRow");
+  if (t) t.remove();
+}
+function showError(title, detail) {
+  const banner = document.getElementById("errorBanner");
+  let html = `<span class="err-title">⚠️ ${escapeHtml(title)}</span>`;
+  if (detail) html += `<span class="err-detail">${escapeHtml(detail)}</span>`;
+  banner.innerHTML = html;
+  banner.style.display = "block";
+  banner.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+function hideError() { document.getElementById("errorBanner").style.display = "none"; }
+
+// ---------------- Send ----------------
+async function sendMessage() {
+  if (isSending) return;
+  const ta = document.getElementById("userInput");
+  const text = ta.value.trim();
+  if (!text && !attachedImage) return;
+
+  if (!apiKey) { openKeyModal(); return; }
+
+  hideError();
+
+  const imgPreview = attachedImage ? attachedImage.previewUrl : null;
+  appendMessage("user", text, imgPreview);
+
+  const parts = [];
+  if (text) parts.push({ text });
+  if (attachedImage) parts.push({ inline_data: { mime_type: attachedImage.mimeType, data: attachedImage.base64 } });
+  apiHistory.push({ role: "user", parts });
+
+  ta.value = "";
+  ta.style.height = "auto";
+  removeAttachment();
+
+  isSending = true;
+  document.getElementById("sendBtn").disabled = true;
+  showTyping();
+
+  try {
+    const reply = await callGemini();
+    hideTyping();
+    appendMessage("ai", reply, null);
+    apiHistory.push({ role: "model", parts: [{ text: reply }] });
+  } catch (err) {
+    hideTyping();
+    if (err instanceof TypeError) {
+      // fetch itself failed before getting a response — almost always network/CORS/offline
+      showError(
+        "Connect nahi ho paya (network/CORS issue)",
+        "Raw error: " + err.message + "\nCheck: internet chal raha hai? Browser ne request block toh nahi ki (kabhi kabhi mobile browsers ka 'Lite/Data Saver mode' cross-site requests block karta hai — usse off karke dekhein)."
+      );
+    } else {
+      showError(err.title || "Kuch gadbad hui", err.message || String(err));
+    }
+  } finally {
+    isSending = false;
+    document.getElementById("sendBtn").disabled = false;
+  }
+}
+
+async function callGemini() {
+  const subjectConfig = SUBJECTS[currentSubject];
+  const systemText = subjectConfig.system +
+    " If the student attaches an image (e.g. a homework question, diagram, or handwritten problem), read it carefully and solve/explain what's in it. Keep answers well-structured with step numbers, and exam-friendly for Indian students. Reply in the same language mix the student uses (Hindi, English, or Hinglish).";
+
+  const body = {
+    system_instruction: { parts: [{ text: systemText }] },
+    contents: apiHistory,
+    generationConfig: { temperature: 0.6, maxOutputTokens: 1500 }
+  };
+
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    let rawBody = "";
+    try { rawBody = await res.text(); } catch (e) {}
+    let detail = rawBody;
+    try { const errJson = JSON.parse(rawBody); detail = errJson?.error?.message || rawBody; } catch (e) {}
+
+    let title = "API error (HTTP " + res.status + ")";
+    if (res.status === 400) title = "Bad request (400)";
+    if (res.status === 403) title = "API key invalid ya blocked (403)";
+    if (res.status === 404) title = "Model not found (404) — model name galat ho sakta hai";
+    if (res.status === 429) title = "Rate limit / quota khatam (429)";
+
+    const e = new Error(detail || "(server se koi detail nahi mili, status " + res.status + ")");
+    e.title = title;
+    throw e;
+  }
+
+  const data = await res.json();
+  const candidate = data?.candidates?.[0];
+  if (!candidate) {
+    const blockReason = data?.promptFeedback?.blockReason;
+    if (blockReason) {
+      const e = new Error("blockReason: " + blockReason);
+      e.title = "Response blocked by safety filter";
+      throw e;
+    }
+    const e = new Error(JSON.stringify(data));
+    e.title = "Koi jawaab nahi mila";
+    throw e;
+  }
+  const parts = candidate.content?.parts || [];
+  return parts.map(p => p.text || "").join("").trim() || "(khaali jawaab mila)";
+}
+</script>
+</body>
+</html>
